@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แจ้งปัญหาระบบ CRM</title>
+  <style>
+    body { font-family: 'Sarabun', 'Tahoma', sans-serif; max-width: 500px; margin: 20px auto; padding: 0 16px; }
+    h2 { color: #d32f2f; }
+    label { display: block; margin-top: 12px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+    button { margin-top: 20px; width: 100%; padding: 12px; background: #d32f2f; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:disabled { background: #999; }
+    #status { margin-top: 12px; text-align: center; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>📢 แจ้งปัญหาการใช้งานระบบ CRM</h2>
+  <form id="reportForm">
+    <label>ชื่อผู้แจ้ง</label>
+    <input type="text" id="name" required>
+
+    <label>แผนก</label>
+    <input type="text" id="department" required>
+
+    <label>ความเร่งด่วน</label>
+    <select id="urgency">
+      <option value="ปกติ">ปกติ</option>
+      <option value="ด่วน">ด่วน</option>
+      <option value="ด่วนมาก (ใช้งานไม่ได้)">ด่วนมาก (ใช้งานไม่ได้)</option>
+    </select>
+
+    <label>ปัญหาที่พบ (หัวข้อสั้นๆ)</label>
+    <input type="text" id="problem" required>
+
+    <label>รายละเอียดเพิ่มเติม</label>
+    <textarea id="detail" rows="4"></textarea>
+
+    <button type="submit" id="submitBtn">ส่งแจ้งปัญหา</button>
+    <div id="status"></div>
+  </form>
+
+  <script>
+    // ⚠️ แก้บรรทัดนี้เป็น URL ของ Apps Script Web App ที่ Deploy ไว้ (ลงท้ายด้วย /exec)
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+
+    document.getElementById('reportForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      status.textContent = 'กำลังส่ง...';
+
+      const data = {
+        name: document.getElementById('name').value,
+        department: document.getElementById('department').value,
+        urgency: document.getElementById('urgency').value,
+        problem: document.getElementById('problem').value,
+        detail: document.getElementById('detail').value
+      };
+
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // กัน browser ยิง preflight OPTIONS ซึ่ง Apps Script ไม่รองรับ
+        body: JSON.stringify(data)
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          if (result.status === 'partial') {
+            status.textContent = '⚠️ บันทึกข้อมูลแล้ว แต่แจ้งเตือนบางช่องทางไม่สำเร็จ (' + result.errors.join(', ') + ')';
+          } else if (result.status === 'error') {
+            status.textContent = '❌ เกิดข้อผิดพลาด: ' + result.message;
+          } else {
+            status.textContent = '✅ ส่งเรื่องเรียบร้อย ฝ่าย IT ได้รับแจ้งแล้ว';
+            document.getElementById('reportForm').reset();
+          }
+          btn.disabled = false;
+        })
+        .catch(function (err) {
+          status.textContent = '❌ เชื่อมต่อไม่สำเร็จ: ' + err.message;
+          btn.disabled = false;
+        });
+    });
+  </script>
+</body>
+</html>
